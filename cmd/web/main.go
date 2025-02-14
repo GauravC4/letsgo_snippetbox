@@ -1,27 +1,43 @@
 package main
 
 import (
-	"log"
+	"flag"
+	"log/slog"
 	"net/http"
+	"os"
 )
 
+type config struct {
+	addr      string
+	staticDir string
+}
+
+var cfg config
+
+type application struct {
+	logger *slog.Logger
+}
+
 func main() {
-	mux := http.NewServeMux()
+	flag.StringVar(&cfg.addr, "addr", ":4000", "Port to listen to")
+	flag.StringVar(&cfg.staticDir, "static-dir", "./ui/static/", "Path to static assets")
+	flag.Parse()
 
-	fileServer := http.FileServer(http.Dir("./ui/static/"))
+	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+		Level:     slog.LevelDebug,
+		AddSource: true,
+	}))
 
-	mux.Handle("GET /static/", http.StripPrefix("/static", fileServer))
+	app := &application{
+		logger: logger,
+	}
 
-	mux.HandleFunc("GET /{$}", home)
-	mux.HandleFunc("GET /snippet/view/{id}", snippetView)
-	mux.HandleFunc("GET /snippet/create", snippetCreate)
-	mux.HandleFunc("POST /snippet/create", snippetCreatePost)
+	app.logger.Info("starting server on ", slog.String("addr", cfg.addr))
 
-	log.Print("starting server on :4000")
-
-	err := http.ListenAndServe(":4000", mux)
+	err := http.ListenAndServe(cfg.addr, app.routes())
 	if err != nil {
-		log.Fatal(err)
+		app.logger.Error(err.Error())
+		os.Exit(1)
 	}
 
 }
