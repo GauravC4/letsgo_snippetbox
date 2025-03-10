@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/go-playground/form/v4"
 	_ "github.com/lib/pq"
 	"snippetbox.chapstewie.net/cmd/web/internal/models"
 )
@@ -23,6 +24,7 @@ type application struct {
 	logger        *slog.Logger
 	snippets      *models.SnippetModel
 	templateCache map[string]*template.Template
+	formDecoder   *form.Decoder
 }
 
 func main() {
@@ -59,6 +61,8 @@ func main() {
 	}
 
 	app.templateCache = templateCache
+
+	app.formDecoder = form.NewDecoder()
 
 	// start server
 	app.logger.Info("starting server on ", slog.String("addr", cfg.addr))
